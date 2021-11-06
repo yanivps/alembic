@@ -23,6 +23,7 @@ from .render import _user_defined_render
 from .. import util
 from ..operations import ops
 from ..util import sqla_compat
+from alembic import context
 
 if TYPE_CHECKING:
     from typing import Literal
@@ -122,6 +123,11 @@ def _autogen_for_tables(
     metadata_table_names = OrderedSet(
         [(table.schema, table.name) for table in autogen_context.sorted_tables]
     ).difference([(version_table_schema, version_table)])
+    found_schemas =  set([x[0] for x in metadata_table_names])
+    if len(found_schemas) > 1:
+        shared_bind = context.config.get_section_option("fk_different_bind_workaround", "shared_bind")
+        if shared_bind in found_schemas:
+            metadata_table_names = OrderedSet([x for x in metadata_table_names if x[0] != shared_bind])
 
     _compare_tables(
         conn_table_names,
